@@ -24,6 +24,7 @@
 #include "gui.h"
 #include "FortAthenaMutator_InventoryOverride.h"
 #include "FortAthenaMutator_TDM.h"
+#include "log.h"
 
 void AFortPlayerController::ClientReportDamagedResourceBuilding(ABuildingSMActor* BuildingSMActor, EFortResourceType PotentialResourceType, int PotentialResourceCount, bool bDestroyed, bool bJustHitWeakspot)
 {
@@ -1378,6 +1379,48 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 		{
 			DeadPlayerState->ProcessEvent(OnRep_DeathInfoFn);
 		}
+	
+auto AllPlayerStates = UGameplayStatics::GetAllActorsOfClass(GetWorld(), AFortPlayerStateAthena::StaticClass()); 
+
+  for (int i = 0; i < AllPlayerStates.Num(); ++i) {
+
+auto CurrentPlayerState = Cast<AFortPlayerStateAthena>(AllPlayerStates.At(i));
+if (!CurrentPlayerState) continue;
+auto ControllerOwner = CurrentPlayerState->GetOwner();
+
+if (ControllerOwner && ControllerOwner->IsA(AFortPlayerControllerAthena::StaticClass()) && CurrentPlayerState->GetPlace() == 1) {
+	std::string PlayerName = CurrentPlayerState->GetPlayerName().ToString();
+	std::string apiKey = "ur-api-key";
+	std::string reason = "Win";
+
+	std::string apiUrl1 = "http://127.0.0.1:3551/api/reload/vbucks?apikey=" + apiKey +
+		"&username=" + PlayerName + "&reason=" + reason;
+
+	CURL* curl;
+	CURLcode res;
+
+	curl = curl_easy_init();
+	if (curl)
+	{
+		curl_easy_setopt(curl, CURLOPT_URL, apiUrl1.c_str());
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+		res = curl_easy_perform(curl);
+		if (res != CURLE_OK)
+		{
+			LOG_ERROR(LogDev, "curl request failed for {}: {}", username, curl_easy_strerror(res));
+		}
+		else
+		{
+			LOG_INFO(LogDev, "Successfully added V-Bucks for {}", username);
+		}
+
+		curl_easy_cleanup(curl);
+	}
+	else
+	{
+		LOG_ERROR(LogDev, "Failed to initialize curl for {}.", username);
+	}
 
 		if (KillerPlayerState && KillerPlayerState != DeadPlayerState)
 		{
@@ -1437,6 +1480,38 @@ void AFortPlayerController::ClientOnPawnDiedHook(AFortPlayerController* PlayerCo
 				}
 			}
 		}
+		
+std::string username = KillerPlayerState->GetPlayerName().ToString(); 
+std::string apiKey = "Fortnite";
+std::string reason = "Kill";
+std::string apiUrl = "http://127.0.0.1:3551/api/reload/vbucks?apikey=" + apiKey +
+    "&username=" + username + "&reason=" + reason;
+
+CURL* curl;
+CURLcode res;
+
+curl = curl_easy_init();
+if (curl)
+{
+    curl_easy_setopt(curl, CURLOPT_URL, apiUrl.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK)
+    {
+        LOG_ERROR(LogDev, "curl request failed for {}: {}", killerUsername, curl_easy_strerror(res));
+    }
+    else
+    {
+        LOG_INFO(LogDev, "Successfully added V-Bucks for {}", killerUsername);
+    }
+
+    curl_easy_cleanup(curl);
+}
+else
+{
+    LOG_ERROR(LogDev, "Failed to initialize curl for {}.", killerUsername);
+}
 
 		// LOG_INFO(LogDev, "Reported kill.");
 
